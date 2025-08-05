@@ -41,14 +41,40 @@ server.registerTool(
       city: z.string(),
     },
   },
-  async ({ city }) => ({
-    content: [
-      {
-        type: "text",
-        text: `The weather in ${city} is not sunny in fact it is raining a lot`,
-      },
-    ],
-  })
+  async ({ city }) => {
+    try {
+      const data = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&language=en&format=json`
+      );
+      const res = await data.json();
+
+      if (res.results.length === 0) throw new Error("City not found");
+
+      const { latitude, longitude } = res.results[0];
+
+      const dataCity = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m&current=temperature_2m,precipitation`
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(await dataCity.json(), null, 2),
+          },
+        ],
+      };
+    } catch (e) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error getting the weather for ${city}`,
+          },
+        ],
+      };
+    }
+  }
 );
 
 //3 Escuchar las conexiones del cliente
