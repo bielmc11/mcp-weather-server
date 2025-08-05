@@ -48,19 +48,31 @@ server.registerTool(
       );
       const res = await data.json();
 
-      if (res.results.length === 0) throw new Error("City not found");
+      if (!res.results || res.results.length === 0)
+        throw new Error("City not found");
 
       const { latitude, longitude } = res.results[0];
 
       const dataCity = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m&current=temperature_2m,precipitation`
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,precipitation`
       );
+      const weather = await dataCity.json();
+
+      const temp = weather.current?.temperature_2m;
+      const precip = weather.current?.precipitation;
+
+      let text = `El tiempo actual en ${city} es:\n`;
+      if (typeof temp !== "undefined") text += `Temperatura: ${temp}°C\n`;
+      if (typeof precip !== "undefined")
+        text += `Precipitación: ${precip} mm\n`;
+      if (typeof temp === "undefined" && typeof precip === "undefined")
+        text += "No hay datos disponibles.";
 
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify(await dataCity.json(), null, 2),
+            text,
           },
         ],
       };
@@ -69,7 +81,7 @@ server.registerTool(
         content: [
           {
             type: "text",
-            text: `Error getting the weather for ${city}`,
+            text: `Error obteniendo el tiempo para ${city}`,
           },
         ],
       };
